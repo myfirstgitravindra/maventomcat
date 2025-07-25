@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hello World</title>
+  <title>Thanks for visiting</title>
   <style>
     body {
       background-color: #f0f9ff;
