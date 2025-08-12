@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "ravindra806/myapp:1"
+        DOCKER_IMAGE = "ravindra806/myapp:4"
         DOCKER_REGISTRY = "docker.io"
-        SONAR_HOST_URL = "http://54.162.245.70:9000"
+        SONAR_HOST_URL = "http://sonarqube:9000"  // Using container name
         PROJECT_KEY = "myproject"
     }
 
     stages {
-        /* Stage 1: Git Checkout */
+        /* Stage 1: Single Git Checkout */
         stage('Git Checkout') {
             steps {
                 checkout scm
@@ -21,8 +21,7 @@ pipeline {
             agent {
                 docker {
                     image 'sonarsource/sonar-scanner-cli:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                    reuseNode true
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --network host'
                 }
             }
             environment {
@@ -53,7 +52,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:20.10-dind'
-                    args '--privileged'
+                    args '--privileged --network host'
                 }
             }
             steps {
@@ -63,12 +62,12 @@ pipeline {
             }
         }
 
-        /* Stage 5: Security Scan */
+        /* Stage 5: Vulnerability Scan */
         stage('Vulnerability Scan') {
             agent {
                 docker {
                     image 'aquasec/trivy:latest'
-                    args '--entrypoint='
+                    args '--entrypoint= --network host'
                 }
             }
             steps {
@@ -87,6 +86,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:20.10-cli'
+                    args '--network host'
                 }
             }
             steps {
