@@ -1,9 +1,9 @@
 pipeline {
-    agent none  // We'll define agents per stage
+    agent any
 
     environment {
         // Customize these values
-        DOCKER_IMAGE = "yourdockerhub/myapp:${1}"
+        DOCKER_IMAGE = "ravindra806/myapp:${BUILD_NUMBER}" // Use your Docker Hub username
         DOCKER_REGISTRY = "docker.io"
         SONAR_HOST_URL = "http://54.162.245.70:9000"
         PROJECT_KEY = "myproject"
@@ -12,16 +12,8 @@ pipeline {
     stages {
         /* Stage 1: Git Checkout */
         stage('Git Checkout') {
-            agent any
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    extensions: [],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/myfirstgitravindra/maventomcat.git'
-                    ]]
-                ])
+                checkout scm
             }
         }
 
@@ -31,7 +23,6 @@ pipeline {
                 docker {
                     image 'sonarsource/sonar-scanner-cli:latest'
                     args '-v /var/run/docker.sock:/var/run/docker.sock'
-                    reuseNode true
                 }
             }
             environment {
@@ -62,7 +53,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:20.10-dind'
-                    args '--privileged --network host'
+                    args '--privileged'
                 }
             }
             steps {
@@ -86,7 +77,6 @@ pipeline {
                     --severity CRITICAL,HIGH \
                     --exit-code 1 \
                     --ignore-unfixed \
-                    --no-progress \
                     ${DOCKER_IMAGE}
                 """
             }
@@ -99,30 +89,17 @@ pipeline {
                     image 'docker:20.10-cli'
                 }
             }
-            environment {
-                DOCKER_CREDS = credentials('dockerhub-creds')
-            }
             steps {
-                sh """
-                    docker login \
-                    -u ${DOCKER_CREDS_USR} \
-                    -p ${DOCKER_CREDS_PSW} \
-                    ${DOCKER_REGISTRY}
-                    docker push ${DOCKER_IMAGE}
-                """
-            }
-        }
-
-        /* Stage 7: Deploy (Example) */
-        stage('Deploy to Staging') {
-            when {
-                branch 'main'
-            }
-            agent any
-            steps {
-                echo "Deploying ${DOCKER_IMAGE} to staging environment"
-                // Add your deployment commands here
-                // Example: kubectl apply -f k8s/deployment.yaml
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds', // Matches your credential ID
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+                        docker push ${DOCKER_IMAGE}
+                    """
+                }
             }
         }
     }
@@ -130,23 +107,13 @@ pipeline {
     post {
         always {
             echo "Pipeline execution completed"
-            cleanWs()  // Clean workspace
-        }
-        success {
-            slackSend(
-                color: 'good',
-                message: "SUCCESS: Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-            )
+            cleanWs()
         }
         failure {
-            slackSend(
-                color: 'danger',
-                message: "FAILED: Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-            )
             emailext (
                 subject: "FAILED: Pipeline '${env.JOB_NAME}' (${env.BUILD_NUMBER})",
                 body: "Check console output at ${env.BUILD_URL}",
-                to: 'devops-team@example.com'
+                to: 'your-email@example.com' // Replace with your email
             )
         }
     }
