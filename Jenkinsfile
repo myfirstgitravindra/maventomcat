@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Customize these values
-        DOCKER_IMAGE = "ravindra806/myapp:${BUILD_NUMBER}" // Use your Docker Hub username
+        DOCKER_IMAGE = "ravindra806/myapp:1"
         DOCKER_REGISTRY = "docker.io"
         SONAR_HOST_URL = "http://54.162.245.70:9000"
         PROJECT_KEY = "myproject"
@@ -23,6 +22,7 @@ pipeline {
                 docker {
                     image 'sonarsource/sonar-scanner-cli:latest'
                     args '-v /var/run/docker.sock:/var/run/docker.sock'
+                    reuseNode true
                 }
             }
             environment {
@@ -91,7 +91,7 @@ pipeline {
             }
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds', // Matches your credential ID
+                    credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
@@ -108,13 +108,6 @@ pipeline {
         always {
             echo "Pipeline execution completed"
             cleanWs()
-        }
-        failure {
-            emailext (
-                subject: "FAILED: Pipeline '${env.JOB_NAME}' (${env.BUILD_NUMBER})",
-                body: "Check console output at ${env.BUILD_URL}",
-                to: 'your-email@example.com' // Replace with your email
-            )
         }
     }
 }
