@@ -13,15 +13,16 @@ pipeline {
             }
         }
         
-        stage('SonarQube Analysis') {
+       stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                // Ensure 'sonarqube' matches the exact name in Jenkins config (case-sensitive)
+                withSonarQubeEnv('sonarqube') {  
                     sh """
                         sonar-scanner \
-                          -Dsonar.projectKey=myproject \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=http://54.162.245.70:9000 \
-                          -Dsonar.login=${SONAR_TOKEN}
+                          -Dsonar.projectKey=myproject \  // Replace with your project key
+                          -Dsonar.sources=. \             // Scan current directory
+                          -Dsonar.host.url=http://54.162.245.70:9000 \  // From your config
+                          -Dsonar.login=${SONAR_TOKEN}    // Uses the token securely
                     """
                 }
             }
